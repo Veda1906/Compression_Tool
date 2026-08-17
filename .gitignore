@@ -1,0 +1,17 @@
+# Compiled binary
+compressor
+
+# Generated compression outputs
+*.huff
+*.rle
+*.huff.out
+*.rle.out
+*.dot
+*.png
+!docs/*.png
+
+# Generated reports
+report*.md
+
+# OS junk
+.DS_Store
