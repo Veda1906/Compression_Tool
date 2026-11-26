@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <unordered_map>
-#include <queue>
+#include "min_heap.hpp"
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -10,21 +10,22 @@ struct Node {
     uint8_t byteValue;
     bool isLeaf;
     uint64_t freq;
+    uint8_t minByte;
     Node* left;
     Node* right;
 
     // Leaf node constructor
     Node(uint8_t b, uint64_t f)
-        : byteValue(b), isLeaf(true), freq(f), left(nullptr), right(nullptr) {}
+        : byteValue(b), isLeaf(true), freq(f), minByte(b), left(nullptr), right(nullptr) {}
 
     // Internal node constructor (merges two subtrees)
     Node(Node* l, Node* r)
-        : byteValue(0), isLeaf(false), freq(l->freq + r->freq), left(l), right(r) {}
+        : byteValue(0), isLeaf(false), freq(l->freq + r->freq), minByte(std::min(l->minByte,r->minByte)), left(l), right(r) {}
 };
 
 // Min-heap comparator: smallest frequency has highest priority.
 struct Compare {
-    bool operator()(Node* a, Node* b) const { return a->freq > b->freq; }
+    bool operator()(Node* a, Node* b) const { return a->freq != b->freq ? a->freq < b->freq : a->minByte < b->minByte; }
 };
 
 class HuffmanTree {
@@ -34,41 +35,21 @@ public:
 
     // Builds the tree greedily from a byte -> frequency table.
     //
-    // IMPORTANT: unordered_map iteration order is not guaranteed to match
-    // between the encoder's map and the decoder's separately-rebuilt map
-    // (it depends on insertion order, not just key contents). If two bytes
-    // tie on frequency, inserting them into the heap in a different order
-    // would break the tie differently and silently produce a DIFFERENT
-    // tree on decode -> corrupted output. Sorting by byte value first makes
-    // heap insertion order deterministic, so ties always resolve the same
-    // way on both ends.
+    // Break frequency ties by the smallest byte in each subtree.
     void build(const std::unordered_map<uint8_t, uint64_t>& freqTable) {
-        std::vector<std::pair<uint8_t, uint64_t>> entries(freqTable.begin(), freqTable.end());
-        std::sort(entries.begin(), entries.end(),
-                  [](const auto& a, const auto& b) { return a.first < b.first; });
-
-        std::priority_queue<Node*, std::vector<Node*>, Compare> heap;
+        destroy(root); root = nullptr;
+        MinHeap<Node*, Compare> heap;
+        const auto& entries = freqTable;
         for (const auto& entry : entries) {
             heap.push(new Node(entry.first, entry.second));
         }
 
-        // Edge case: only one unique byte in the whole file.
-        // We still need a valid 1-bit code, so pair it with a dummy leaf.
-        if (heap.size() == 1) {
-            Node* only = heap.top();
-            heap.pop();
-            root = new Node(only, new Node(static_cast<uint8_t>(0), 0));
-        }
-
         while (heap.size() > 1) {
-            Node* left = heap.top(); heap.pop();
-            Node* right = heap.top(); heap.pop();
+            Node* left = heap.extractMin();
+            Node* right = heap.extractMin();
             heap.push(new Node(left, right));
         }
-
-        if (!root && !heap.empty()) {
-            root = heap.top();
-        }
+        if (!heap.empty()) root = heap.extractMin();
 
         codes.clear();
         std::string path;

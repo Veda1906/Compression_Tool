@@ -46,6 +46,8 @@ void writeFile(const std::string& path, const std::vector<uint8_t>& data) {
     if (!file) throw std::runtime_error("Cannot write file: " + path);
     file.write(reinterpret_cast<const char*>(data.data()),
                static_cast<std::streamsize>(data.size()));
+    file.close();
+    if (!file) throw std::runtime_error("Write failed: " + path);
 }
 
 // Compression ratio as "percent smaller than the original".
@@ -162,21 +164,7 @@ void treeCommand(const std::string& inputPath, const std::string& dotPath) {
         treeviz::exportDot(tree, dotPath);
         std::cout << "\nGraphviz DOT file written to: " << dotPath << "\n";
 
-        // Best-effort: render straight to PNG if graphviz's `dot` binary
-        // is available, since that's usually what you actually want for
-        // a demo/slide.
-        std::string pngPath = dotPath;
-        auto dotPos = pngPath.rfind(".dot");
-        if (dotPos != std::string::npos) pngPath = pngPath.substr(0, dotPos);
-        pngPath += ".png";
-
-        std::string cmd = "dot -Tpng \"" + dotPath + "\" -o \"" + pngPath + "\" 2>/dev/null";
-        if (std::system(cmd.c_str()) == 0) {
-            std::cout << "Rendered image:      " << pngPath << "\n";
-        } else {
-            std::cout << "(Install Graphviz and run `dot -Tpng " << dotPath
-                       << " -o tree.png` to render an image.)\n";
-        }
+        std::cout << "Render with Graphviz: dot -Tpng <input.dot> -o <output.png>\n";
     }
 }
 
@@ -195,7 +183,7 @@ struct MethodStats {
 
 namespace {
 
-using clock_type = std::chrono::high_resolution_clock;
+using clock_type = std::chrono::steady_clock;
 
 MethodStats benchmarkHuffman(const std::vector<uint8_t>& data) {
     MethodStats stats;

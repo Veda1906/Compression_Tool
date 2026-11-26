@@ -56,6 +56,7 @@ inline std::vector<uint8_t> decodeRaw(const std::vector<uint8_t>& data) {
 //   [4 bytes] CRC32 of original data
 //   [...]     RLE-encoded body
 inline std::vector<uint8_t> encodeFile(const std::vector<uint8_t>& data) {
+    if (data.size()>UINT32_MAX) throw std::runtime_error("Input exceeds format limit");
     std::vector<uint8_t> out = {'R', 'L', 'E', '1'};
     detail::writeUint32(out, static_cast<uint32_t>(data.size()));
     detail::writeUint32(out, crc32(data));
@@ -72,9 +73,14 @@ inline std::vector<uint8_t> decodeFile(const std::vector<uint8_t>& in, bool* che
     uint32_t originalSize = detail::readUint32(in, pos);
     uint32_t expectedChecksum = detail::readUint32(in, pos);
     std::vector<uint8_t> body(in.begin() + static_cast<long>(pos), in.end());
+    if(body.size()%2) throw std::runtime_error("Incomplete RLE pair");
+    uint64_t sum=0;
+    for(size_t i=0;i<body.size();i+=2) { if(!body[i]) throw std::runtime_error("Zero RLE count"); sum+=body[i]; }
+    if(sum!=originalSize) throw std::runtime_error("RLE size mismatch");
     std::vector<uint8_t> output = decodeRaw(body);
 
     bool ok = (output.size() == originalSize) && (crc32(output) == expectedChecksum);
+    if (!ok) throw std::runtime_error("RLE checksum mismatch");
     if (checksumOk) *checksumOk = ok;
     return output;
 }
