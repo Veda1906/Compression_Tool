@@ -7,13 +7,17 @@ SRC      := src/main.cpp
 
 all: $(TARGET)
 
-$(TARGET): $(SRC) src/bitio.hpp src/huffman.hpp src/crc32.hpp src/huffman_codec.hpp src/rle.hpp src/tree_viz.hpp
+$(TARGET): $(SRC) src/min_heap.hpp src/bitio.hpp src/huffman.hpp src/crc32.hpp src/huffman_codec.hpp src/rle.hpp src/tree_viz.hpp
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRC)
 
-test: $(TARGET)
+test: $(TARGET) unit_tests
+	./unit_tests
 	bash tests/run_tests.sh
 
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGET) unit_tests
 	rm -f samples/*.huff samples/*.huff.out samples/*.rle samples/*.rle.out
 	rm -f samples/*.dot samples/*.png samples/*.md
+
+unit_tests: tests/unit_tests.cpp $(wildcard src/*.hpp)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ $<

@@ -80,3 +80,10 @@ Real tools like gzip combine both ideas (and more) for better results
   than either method alone.
 
 
+
+## Updated implementation
+Uses a custom binary min-heap and deterministic frequency/minimum-byte tie breaking.
+Huffman archives now use HUF2 magic; old HUFF archives require the original decoder.
+RLE1 is unchanged. Both formats store 32-bit sizes and reject inputs above UINT32_MAX.
+Tree command exports DOT; render manually with `dot -Tpng tree.dot -o tree.png`.
+`make test` runs C++ unit assertions and CLI round-trip tests.
