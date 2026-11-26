@@ -12,10 +12,9 @@ roundtrip() {
     local packed="${file}.${ext}"
     local restored="${file}.${ext}.out"
 
-    "$BIN" "$mode_compress" "$file" "$packed" > /dev/null
-    "$BIN" "$mode_decompress" "$packed" "$restored" > /dev/null
-
-    if cmp -s "$file" "$restored"; then
+    if "$BIN" "$mode_compress" "$file" "$packed" > /dev/null &&
+       "$BIN" "$mode_decompress" "$packed" "$restored" > /dev/null &&
+       cmp -s "$file" "$restored"; then
         echo "PASS: $mode_compress/$mode_decompress on $file"
         PASS=$((PASS + 1))
     else
